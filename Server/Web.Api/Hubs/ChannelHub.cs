@@ -33,7 +33,7 @@ public sealed class ChannelHub(IChannelService channelService) : Hub
         }
 
         string senderId = Context.ConnectionId;
-        var message = new UserMessage(senderId, content, DateTime.UtcNow);
+        var message = new UserMessage(Guid.NewGuid().ToString(), senderId, content, DateTime.UtcNow);
 
         ChannelMessages.AddOrUpdate(channelId, [message], (key, existingMessages) =>
         {
@@ -41,6 +41,6 @@ public sealed class ChannelHub(IChannelService channelService) : Hub
             return existingMessages;
         });
 
-        await Clients.Group(channelId).SendAsync("ReceiveChannelMessage", senderId, content, message.SentTimeUtc);
+        await Clients.Group(channelId).SendAsync("ReceiveChannelMessage", message.Id, senderId, content, message.SentTimeUtc);
     }
 }

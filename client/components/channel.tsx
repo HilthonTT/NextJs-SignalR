@@ -33,12 +33,15 @@ export const Channel = ({ channelId }: Props) => {
       .then(() => {
         connect.invoke("JoinChannel", channelId);
 
-        connect.on("ReceiveChannelMessage", (sender, content, sentTimeUtc) => {
-          setMessages((prev) => [
-            ...prev,
-            { sender, content, sentTimeUtc: new Date(sentTimeUtc) },
-          ]);
-        });
+        connect.on(
+          "ReceiveChannelMessage",
+          (id, sender, content, sentTimeUtc) => {
+            setMessages((prev) => [
+              ...prev,
+              { id, sender, content, sentTimeUtc: new Date(sentTimeUtc) },
+            ]);
+          }
+        );
 
         connect.on("ChannelMessageHistory", (messageHistory: Message[]) => {
           setMessages(

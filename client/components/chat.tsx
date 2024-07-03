@@ -26,11 +26,26 @@ export const Chat = () => {
     connect
       .start()
       .then(() => {
-        connect.on("ReceiveMessage", (sender, content, sentTimeUtc) => {
+        connect.on("ReceiveMessage", (id, sender, content, sentTimeUtc) => {
           setMessages((prev) => [
             ...prev,
-            { sender, content, sentTimeUtc: new Date(sentTimeUtc) },
+            { id, sender, content, sentTimeUtc: new Date(sentTimeUtc) },
           ]);
+        });
+
+        connect.on("MessageHistory", (messageHistory) => {
+          setMessages(
+            messageHistory.map((msg: Message) => ({
+              ...msg,
+              sentTimeUtc: new Date(msg.sentTimeUtc),
+            }))
+          );
+        });
+
+        connect.on("MessageRemoved", (messageId) => {
+          setMessages((prev) =>
+            prev.filter((message) => message.id !== messageId)
+          );
         });
 
         connect
@@ -51,6 +66,8 @@ export const Chat = () => {
             console.error("Error while disconnecting from SignalR Hub:", err)
           );
         connect.off("ReceiveMessage");
+        connect.off("MessageHistory");
+        connect.off("MessageRemoved");
       }
     };
   }, []);
@@ -62,6 +79,12 @@ export const Chat = () => {
     }
   };
 
+  const removeMessage = async (id: string) => {
+    if (connection) {
+      await connection.send("RemoveMessage", id);
+    }
+  };
+
   const isMyMessage = (username: string) => {
     return connection && username === connection.connectionId;
   };
@@ -69,16 +92,25 @@ export const Chat = () => {
   return (
     <div className="p-4">
       <div className="mb-4">
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={`p-2 my-2 rounded ${
-              isMyMessage(msg.sender) ? "bg-blue-200" : "bg-gray-200"
-            }`}>
-            <p>{msg.content}</p>
-            <p className="text-xs">{msg.sentTimeUtc.toUTCString()}</p>
-          </div>
-        ))}
+        <div className="flex flex-col-reverse mt-auto">
+          {messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`p-2 my-2 rounded relative ${
+                isMyMessage(msg.sender) ? "bg-blue-200" : "bg-gray-200"
+              }`}>
+              <p>{msg.content}</p>
+              <p className="text-xs">{msg.sentTimeUtc.toUTCString()}</p>
+              {isMyMessage(msg.sender) && (
+                <button
+                  className="absolute top-0 right-0 p-1 text-xs bg-red-500 text-white rounded"
+                  onClick={() => removeMessage(msg.id)}>
+                  Remove
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
       <div className="d-flex justify-row">
         <input
